@@ -195,7 +195,7 @@ def getInfo():  # 获取信息函数
         now = time.strftime("%H:%M", time.localtime())
         income = '%.2f' % (gsz * float(jine[i]))
 
-        code_gsz.append('%.2f'%float(forecastNetValue))
+        code_gsz.append('%.4f'%float(forecastNetValue))
         code_sy.append(income)
         code_time.append(now)
         code_name.append(cookie_res['name'])
