@@ -156,7 +156,6 @@ def getInfo():
         # 接收数据
         cookie_res = cookie(i)
         Info = getdata(cookie_res)
-
         if (cookie_res['date'] != time.strftime("%m-%d", time.localtime()) and int(time.strftime("%H", time.localtime())) < 9) or (cookie_res['date'] == time.strftime("%m-%d", time.localtime()) ) :
             # 获取昨天的单位净值
             dwjz = danweijingzhi(cookie_res,1)
