@@ -6,10 +6,6 @@ import requests
 import json
 import time
 
-# 读入基金代码
-result = []
-# 读入份额
-fun = {}
 data = {}
 sy = []
 
@@ -31,7 +27,7 @@ screenheight = root.winfo_screenheight()
 
 geometry = s['width'] + 'x' + s['height']
 root.geometry('%dx%d+%d+%d' % (
-int(s['width']), int(s['height']), (screenwidth - int(s['width'])) / 2, (screenheight - int(s['height'])) / 2))
+    int(s['width']), int(s['height']), (screenwidth - int(s['width'])) / 2, (screenheight - int(s['height'])) / 2))
 
 root.window_size = geometry
 # root.geometry("200x220+1079+519")   # 右下角
@@ -64,74 +60,70 @@ result = []
 # 读入份额
 fun = {}
 
-with open(r'fene.json', 'r') as f:
-    for line in f:
-        jine = json.loads(line)
-
 '''jzrq净值日期 dwjz当日净值 gsz净值估算 gszzl估算涨跌百分比'''
 Header = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"}
 
 
-def danweijingzhi(i):
-    url = "http://fundgz.1234567.com.cn/js/%s.js" % i
-    # print(url)
-    # 浏览器头
-    headers = {'content-type': 'application/json',
-               'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100101 Firefox/22.0'}
-    r = requests.get(url, headers=headers)
-    # 返回信息
-    content = r.text
-    # 正则表达式
-    pattern = r'^jsonpgz\((.*)\)'
-    # 查找结果
-    search = re.findall(pattern, content)
+# 获取昨天的单位净值
+def danweijingzhi(cookie_data,i):
+    url = "http://www.fund123.cn/api/fund/queryFundHistoryNetValueList?_csrf=%s" % cookie_data['csrf']
+    headers = {"Host": "www.fund123.cn",
+               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36",
+               "Content-Type": "application/json",
+               "Cookie": cookie_data['cookie'],
+               "accept": "json",
+               "Accept-Encoding": "gzip, deflate",
+               "Accept-Language": "zh-CN,zh;q=0.9"
+               }
+    payload = {"productId": cookie_data['productId'],
+               "startDate": (datetime.date.today() + datetime.timedelta(days=-7)).strftime("%Y%m%d"),
+               "endDate": (datetime.date.today() + datetime.timedelta()).strftime("%Y%m%d"),
+               "pageNum": 1, "pageSize": 10}
+    res = requests.post(url, json=payload, headers=headers).text
+    history = json.loads(res)
 
-    # 遍历结果
-    for j in search:
-        data = json.loads(j)
-        dwjz = float(data['dwjz'])
-
-    return dwjz
+    return history['list'][i]["netValue"]
 
 
+# 从入口获取cookie、基金基本信息
 def cookie(code):
     cookie_data = {}
     url = "http://www.fund123.cn/matiaria?fundCode=" + code
     res = requests.get(url, headers=Header)
 
+    # 将接口传回信息转换为json格式
     res_text = res.text
     pattern = r'context =(.*);</script>'
     resutlt = re.compile(pattern)
     search = resutlt.findall(res_text)[0]
     data = json.loads(search)
 
-    productId = data['materialInfo']['productId']
-    netValue = data['materialInfo']['titleInfo']['netValue']
-    name = data['materialInfo']['fundBrief']['fundNameAbbr']
-    csrf = data["csrf"]
-    cookie = res.cookies
+    # 从接口返回信息
+    productId = data['materialInfo']['productId']  # 基金Id
+    netValue = data['materialInfo']['titleInfo']['netValue']  # 最新净值
+    date = data['materialInfo']['titleInfo']['netValueDate'] # 净值日期
+    name = data['materialInfo']['fundBrief']['fundNameAbbr']  # 基金名称
+    csrf = data["csrf"]  # csrf_token
+    cookie = res.cookies  # cookie
 
-    cookie = requests.utils.dict_from_cookiejar(cookie)
-    cookie_content = "ALIPAYJSESSIONID=" + cookie['ALIPAYJSESSIONID'] + ";ctoken=" + cookie['ctoken']
+    cookie = requests.utils.dict_from_cookiejar(cookie)  # cookie格式化为字典形式
+    cookie_content = "ALIPAYJSESSIONID=" + cookie['ALIPAYJSESSIONID'] + ";ctoken=" + cookie['ctoken']  # 拼接后的cookie
 
+    # 将信息压入字典中
     cookie_data['productId'] = productId
     cookie_data['csrf'] = csrf
     cookie_data['cookie'] = cookie_content
     cookie_data['netValue'] = netValue
     cookie_data['name'] = name
+    cookie_data['date'] = date
 
-    dwjz = danweijingzhi(code)
-
-    cookie_data['dwjz'] = dwjz
     return cookie_data
 
+# 获取估算净值
 def getdata(cookie_data):
     forecast = {}
     url = "http://www.fund123.cn/api/fund/queryFundEstimateIntraday?_csrf=%s" % cookie_data['csrf']
-    # print(url)
-    # 浏览器头
-
     payloadHeader = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36",
         "Content-Type": "application/json", 'cookie': cookie_data['cookie']}
@@ -148,63 +140,47 @@ def getdata(cookie_data):
     res = requests.post(url=url, data=payloadData, headers=payloadHeader)
     res_text = json.loads(res.text)
 
-    forecastGrowth = res_text['list'][-1]['forecastGrowth']
-    forecastNetValue = res_text['list'][-1]['forecastNetValue']
+    forecastGrowth = res_text['list'][-1]['forecastGrowth']  # 估算涨幅
+    forecastNetValue = res_text['list'][-1]['forecastNetValue']  # 估算净值
 
     forecast['forecastGrowth'] = forecastGrowth
     forecast['forecastNetValue'] = forecastNetValue
 
     return forecast
 
-def getInfo():  # 获取信息函数
-    sum = 0
+# 处理数据
+def getInfo():
+    sum = 0  # 初始化总收益
 
     for i in jine:
+        # 接收数据
         cookie_res = cookie(i)
         Info = getdata(cookie_res)
-        forecast = {}
-        url = "http://www.fund123.cn/api/fund/queryFundEstimateIntraday?_csrf=%s" %  cookie_res['csrf']
-        # print(url)
-        # 浏览器头
 
-        payloadHeader = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36",
-            "Content-Type": "application/json", 'cookie': cookie_res['cookie']}
+        if (cookie_res['date'] != time.strftime("%m-%d", time.localtime()) and int(time.strftime("%H", time.localtime())) < 9) or (cookie_res['date'] == time.strftime("%m-%d", time.localtime()) ) :
+            # 获取昨天的单位净值
+            dwjz = danweijingzhi(cookie_res,1)
+            gsz = float(cookie_res['netValue']) - float(dwjz)  # 估算值
+        else:
+            dwjz = danweijingzhi(cookie_res, 0)
+            gsz = float(Info['forecastNetValue']) - float(dwjz)  # 估算值
 
-        # payload data
-        data["startTime"] = todaysDate
-        data["endTime"] = tomorrow
-        data["limit"] = 200
-        data["productId"] =  cookie_res['productId']
-        data["format"] = "true"
-        data["source"] = "WEALTHBFFWEB"
+        gszzl = float(Info['forecastGrowth']) * 100  # 估算涨幅转换
+        now = time.strftime("%H:%M", time.localtime())  # 格式化当前日期
+        income = '%.2f' % (gsz * float(jine[i]))  # 收益
 
-        payloadData = json.dumps(data)
-        res = requests.post(url=url, data=payloadData, headers=payloadHeader)
-        res_text = json.loads(res.text)
-
-        forecastGrowth = res_text['list'][-1]['forecastGrowth']
-        forecastNetValue = res_text['list'][-1]['forecastNetValue']
-
-        forecast['forecastGrowth'] = forecastGrowth
-        forecast['forecastNetValue'] = forecastNetValue
-
-        gsz = float(Info['forecastNetValue']) - float(cookie_res['dwjz'])
-
-        gszzl = 1 - float(forecastNetValue) - float(cookie_res['netValue'])
-        now = time.strftime("%H:%M", time.localtime())
-        income = '%.2f' % (gsz * float(jine[i]))
-
-        code_gsz.append('%.4f'%float(forecastNetValue))
+        # 数据压入
+        code_gsz.append('%.4f' % float(Info['forecastNetValue']))
         code_sy.append(income)
         code_time.append(now)
         code_name.append(cookie_res['name'])
-        code_data.append('%.2f'%float(gszzl))
-
+        code_data.append('%.2f' % float(gszzl))
         sy.append(income)
+
+    # 计算总收益
     for i in code_sy:
         sum += float(i)
-    sum = '%.2f'%sum
+    sum = '%.2f' % sum
     code_sy.append(sum)
     code_name.append('蚂蚁基金接口|总收益：')
 
