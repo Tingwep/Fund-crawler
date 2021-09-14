@@ -37,11 +37,11 @@ root.overrideredirect(1)
 root.wm_attributes('-topmost', True)
 
 # 创建Listbox控件
-listbox1 = Listbox(root, width=20)
-listbox2 = Listbox(root, width=10)
-listbox3 = Listbox(root, width=10)
-listbox4 = Listbox(root, width=10)
-listbox5 = Listbox(root, width=10)
+listbox1 = Listbox(root, width=20,height=s['height'])
+listbox2 = Listbox(root, width=10,height=s['height'])
+listbox3 = Listbox(root, width=10,height=s['height'])
+listbox4 = Listbox(root, width=10,height=s['height'])
+listbox5 = Listbox(root, width=10,height=s['height'])
 
 listbox1.pack(side=LEFT)
 listbox5.pack(side=RIGHT)
@@ -156,6 +156,7 @@ def getInfo():
         # 接收数据
         cookie_res = cookie(i)
         Info = getdata(cookie_res)
+
         if (cookie_res['date'] != time.strftime("%m-%d", time.localtime()) and int(time.strftime("%H", time.localtime())) < 9) or (cookie_res['date'] == time.strftime("%m-%d", time.localtime()) ) :
             # 获取昨天的单位净值
             dwjz = danweijingzhi(cookie_res,1)
