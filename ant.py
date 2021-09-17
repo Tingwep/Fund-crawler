@@ -60,7 +60,7 @@ result = []
 # 读入份额
 fun = {}
 
-'''jzrq净值日期 dwjz当日净值 gsz净值估算 gszzl估算涨跌百分比'''
+
 Header = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36"}
 
@@ -157,7 +157,7 @@ def getInfo():
         cookie_res = cookie(i)
         Info = getdata(cookie_res)
 
-        if (cookie_res['date'] != time.strftime("%m-%d", time.localtime()) and int(time.strftime("%H", time.localtime())) < 9) or (cookie_res['date'] == time.strftime("%m-%d", time.localtime()) ) :
+        if (cookie_res['date'] != time.strftime("%m-%d", time.localtime()) and int(time.strftime("%H", time.localtime())) < 10) or (cookie_res['date'] == time.strftime("%m-%d", time.localtime()) ) :
             # 获取昨天的单位净值
             dwjz = danweijingzhi(cookie_res,1)
             gsz = float(cookie_res['netValue']) - float(dwjz)  # 估算值
