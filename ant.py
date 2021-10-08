@@ -77,7 +77,7 @@ def danweijingzhi(cookie_data,i):
                "Accept-Language": "zh-CN,zh;q=0.9"
                }
     payload = {"productId": cookie_data['productId'],
-               "startDate": (datetime.date.today() + datetime.timedelta(days=-7)).strftime("%Y%m%d"),
+               "startDate": (datetime.date.today() + datetime.timedelta(days=-30)).strftime("%Y%m%d"),
                "endDate": (datetime.date.today() + datetime.timedelta()).strftime("%Y%m%d"),
                "pageNum": 1, "pageSize": 10}
     res = requests.post(url, json=payload, headers=headers).text
